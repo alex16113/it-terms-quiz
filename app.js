@@ -248,7 +248,6 @@ class QuizApp {
       <div class="question-card slide-in">
         <div class="question-header">
           <span class="question-type-badge">${q.emoji} ${typeLabels[q.type] || q.type}</span>
-          <span class="question-topic">${q.topic}</span>
         </div>
         ${q.type !== 'flashcard' ? `<div class="question-text">${q.question || q.statement || ''}</div>` : ''}
         ${questionBody}
