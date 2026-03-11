@@ -724,8 +724,25 @@ class QuizApp {
           this.playSound('click');
           items.forEach(i => i.classList.remove('selected'));
           item.classList.toggle('selected');
+        } else {
+          this.playSound('click');
+          item.classList.remove('selected');
+          pool.appendChild(item);
+          this.updateCategorizeCheck(q);
         }
       });
+    });
+
+    pool.addEventListener('dragover', (e) => { e.preventDefault(); pool.classList.add('drag-over'); });
+    pool.addEventListener('dragleave', () => pool.classList.remove('drag-over'));
+    pool.addEventListener('drop', (e) => {
+      e.preventDefault();
+      pool.classList.remove('drag-over');
+      if (draggedItem) {
+        pool.appendChild(draggedItem);
+        this.playSound('click');
+        this.updateCategorizeCheck(q);
+      }
     });
 
     zones.forEach(zone => {

@@ -887,6 +887,7 @@ body::after {
   cursor: grab;
   transition: var(--transition);
   user-select: none;
+  touch-action: none;
 }
 
 .categorize-item:hover {
@@ -1067,6 +1068,7 @@ body::after {
   cursor: grab;
   transition: var(--transition);
   user-select: none;
+  touch-action: none;
 }
 
 .ordering-item:hover {
