@@ -1080,6 +1080,12 @@ body::after {
   cursor: grabbing;
 }
 
+.ordering-item.selected {
+  border-color: var(--accent);
+  background: rgba(25, 240, 90, 0.06);
+  box-shadow: 0 0 20px rgba(25, 240, 90, 0.08);
+}
+
 .ordering-item.dragging {
   opacity: 0.3;
   border-style: dashed;

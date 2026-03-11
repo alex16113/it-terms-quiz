@@ -17,6 +17,7 @@
   <script src="https://cdn.jsdelivr.net/npm/mobile-drag-drop@2.3.0-rc.2/scroll-behaviour.min.js"></script>
   <script>
     MobileDragDrop.polyfill({
+      holdToDrag: 300,
       dragImageTranslateOverride: MobileDragDrop.scrollBehaviourDragImageTranslateOverride
     });
     window.addEventListener('touchmove', function () { }, { passive: false });

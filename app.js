@@ -440,6 +440,7 @@ class QuizApp {
   renderCategorize(q) {
     const shuffled = [...q.items].sort(() => Math.random() - 0.5);
     return `
+      <div class="question-hint">💡 <b>Подсказка:</b> Перетаскивайте элементы в нужные категории или используйте клики (выберите термин, затем нажмите на категорию).</div>
       <div class="categorize-container">
         <div class="categorize-items-pool" id="itemsPool">
           ${shuffled.map((item) => `<div class="categorize-item" draggable="true" data-text="${item.text}" data-correct="${item.category}">${item.text}</div>`).join('')}
@@ -472,6 +473,7 @@ class QuizApp {
   renderOrdering(q) {
     const shuffled = [...q.items].sort(() => Math.random() - 0.5);
     return `
+      <div class="question-hint">💡 <b>Подсказка:</b> Перетаскивайте элементы или поочередно нажимайте на два элемента, чтобы поменять их местами.</div>
       <div class="ordering-container">
         <div class="ordering-list" id="orderingList">
           ${shuffled.map((item, i) => `
@@ -822,6 +824,7 @@ class QuizApp {
     const list = document.getElementById('orderingList');
     const checkBtn = document.getElementById('checkBtn');
     let draggedItem = null;
+    let selectedItem = null;
     const items = list.querySelectorAll('.ordering-item');
 
     items.forEach(item => {
@@ -829,6 +832,29 @@ class QuizApp {
         draggedItem = item;
         item.classList.add('dragging');
         e.dataTransfer.effectAllowed = 'move';
+      });
+      item.addEventListener('click', () => {
+        this.playSound('click');
+        if (!selectedItem) {
+          items.forEach(i => i.classList.remove('selected'));
+          selectedItem = item;
+          item.classList.add('selected');
+        } else {
+          if (selectedItem !== item) {
+            const next1 = selectedItem.nextSibling;
+            const next2 = item.nextSibling;
+            const parent = item.parentNode;
+            if (next1 === item) parent.insertBefore(item, selectedItem);
+            else if (next2 === selectedItem) parent.insertBefore(selectedItem, item);
+            else {
+              parent.insertBefore(item, next1);
+              parent.insertBefore(selectedItem, next2);
+            }
+            this.updateOrderingNumbers();
+          }
+          selectedItem.classList.remove('selected');
+          selectedItem = null;
+        }
       });
       item.addEventListener('dragend', () => {
         item.classList.remove('dragging');
