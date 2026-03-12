@@ -582,7 +582,6 @@ class QuizApp {
   renderTrueFalse(q) {
     return `
       <div class="truefalse-container">
-        <div class="truefalse-statement">${q.statement}</div>
         <div class="truefalse-buttons">
           <button class="btn-true" id="btnTrue">${ICONS.check} Правда</button>
           <button class="btn-false" id="btnFalse">${ICONS.cross} Ложь</button>
@@ -1047,6 +1046,8 @@ class QuizApp {
     if (q.isBonus && result === true) earnedPoints *= 3;
     else if (q.isBonus && result === 'partial') earnedPoints *= 2;
 
+    const extraHTML = extraText ? `<div class="feedback-extra">${extraText}</div>` : '';
+
     if (result === true) {
       this.streak++;
       if (this.streak > this.maxStreak) this.maxStreak = this.streak;
@@ -1054,19 +1055,35 @@ class QuizApp {
       this.playSound('correct');
       if (this.streak >= 3) this.spawnConfetti();
       const bonusText = timerBonus > 0 ? ` (+${timerBonus} за скорость)` : '';
-      const bonusMultiText = q.isBonus ? ` <strong>x3 БОНУС!</strong>` : '';
-      feedbackEl.innerHTML = `<div class="feedback correct"><span class="feedback-icon">${ICONS.check}</span> Отлично! Правильный ответ!${bonusText}${bonusMultiText}${extraText ? ' ' + extraText : ''}${this.streak >= 3 && !q.isBonus ? ` <strong>🔥 Серия из ${this.streak}!</strong>` : ''}</div>`;
+      const bonusMultiText = q.isBonus ? ` <strong style="color:var(--warning)">x3 БОНУС!</strong>` : '';
+      const streakText = this.streak >= 3 && !q.isBonus ? ` <strong>🔥 Серия из ${this.streak}!</strong>` : '';
+      feedbackEl.innerHTML = `
+        <div class="feedback correct">
+          <span class="feedback-icon">${ICONS.check}</span> Отлично! Правильный ответ!${bonusText}${bonusMultiText}${streakText}
+        </div>
+        ${extraHTML}
+      `;
       this.answers.push({ q, result: 'correct' });
     } else if (result === 'partial') {
       this.streak = 0;
       this.addScore(earnedPoints);
       this.playSound('correct');
-      feedbackEl.innerHTML = `<div class="feedback partial"><span class="feedback-icon">${ICONS.partial}</span> Частично верно!${extraText}</div>`;
+      feedbackEl.innerHTML = `
+        <div class="feedback partial">
+          <span class="feedback-icon">${ICONS.partial}</span> Частично верно!
+        </div>
+        ${extraHTML}
+      `;
       this.answers.push({ q, result: 'partial' });
     } else {
       this.streak = 0;
       this.playSound('wrong');
-      feedbackEl.innerHTML = `<div class="feedback incorrect"><span class="feedback-icon">${ICONS.cross}</span> Неверно.${extraText}</div>`;
+      feedbackEl.innerHTML = `
+        <div class="feedback incorrect">
+          <span class="feedback-icon">${ICONS.cross}</span> Неверно.
+        </div>
+        ${extraHTML}
+      `;
       this.answers.push({ q, result: 'incorrect' });
     }
 

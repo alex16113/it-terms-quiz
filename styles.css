@@ -1910,3 +1910,16 @@ body::after {
     transform: translateX(-100vw) rotate(-5deg);
   }
 }
+
+/* Feedback Extra (Explanations/Typos) */
+.feedback-extra {
+  margin-top: 12px;
+  padding: 14px 18px;
+  background: rgba(255, 255, 255, 0.04);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 15px;
+  line-height: 1.5;
+  animation: fadeInUp 0.4s ease-out;
+}
