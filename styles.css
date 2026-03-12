@@ -1813,3 +1813,100 @@ body::after {
 .hidden {
   display: none !important;
 }
+
+/* ═══════════ NEW CSS FEATURES ═══════════ */
+
+/* Ripple Effect */
+.ripple {
+  position: absolute;
+  border-radius: 50%;
+  transform: scale(0);
+  animation: ripple-anim 600ms linear;
+  background-color: rgba(255, 255, 255, 0.3);
+  pointer-events: none;
+}
+
+@keyframes ripple-anim {
+  to {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+.option-btn,
+.btn-next,
+.btn-check,
+.btn-primary,
+.btn-secondary,
+.categorize-item,
+.flashcard-inner {
+  position: relative;
+  overflow: hidden;
+}
+
+/* Bonus Badge & Card Effect */
+.bonus-badge {
+  background: linear-gradient(135deg, #FFB830, #FF3B5C);
+  color: white;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: bold;
+  box-shadow: 0 0 10px rgba(255, 184, 48, 0.5);
+  animation: pulse-bonus 2s infinite;
+}
+
+@keyframes pulse-bonus {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 10px rgba(255, 184, 48, 0.5);
+  }
+
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 0 15px rgba(255, 184, 48, 0.8);
+  }
+
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 10px rgba(255, 184, 48, 0.5);
+  }
+}
+
+.bonus-card {
+  border: 1px solid #FFB830;
+  box-shadow: 0 8px 32px rgba(255, 184, 48, 0.2);
+}
+
+/* Swipe / Flip Animations */
+.slide-in {
+  animation: swipeIn 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+.slide-out {
+  animation: swipeOut 0.4s cubic-bezier(0.8, -0.2, 0.2, 1) forwards !important;
+}
+
+@keyframes swipeIn {
+  from {
+    opacity: 0;
+    transform: translateX(100vw) rotate(5deg);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0) rotate(0);
+  }
+}
+
+@keyframes swipeOut {
+  from {
+    opacity: 1;
+    transform: translateX(0) rotate(0);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateX(-100vw) rotate(-5deg);
+  }
+}

@@ -63,6 +63,76 @@ class QuizApp {
     return q;
   }
 
+  // ──── RIPPLE EFFECT ────
+  setupRipple() {
+    document.addEventListener('mousedown', (e) => {
+      const target = e.target.closest('button, .option-btn, .flashcard-inner, .categorize-item');
+      if (target) {
+        this.createRipple(e, target);
+      }
+    });
+  }
+
+  createRipple(event, button) {
+    const circle = document.createElement('span');
+    const diameter = Math.max(button.clientWidth, button.clientHeight);
+    const radius = diameter / 2;
+
+    const rect = button.getBoundingClientRect();
+
+    // Ensure we have valid coordinates even if triggered by keyboard or touch
+    const clientX = event.clientX || window.innerWidth / 2;
+    const clientY = event.clientY || window.innerHeight / 2;
+
+    circle.style.width = circle.style.height = `${diameter}px`;
+    circle.style.left = `${clientX - rect.left - radius}px`;
+    circle.style.top = `${clientY - rect.top - radius}px`;
+    circle.classList.add('ripple');
+
+    const ripple = button.getElementsByClassName('ripple')[0];
+    if (ripple) {
+      ripple.remove();
+    }
+
+    button.appendChild(circle);
+    setTimeout(() => circle.remove(), 600);
+  }
+
+  // ──── FUZZY SEARCH (Levenshtein) ────
+  levenshtein(a, b) {
+    if (a.length === 0) return b.length;
+    if (b.length === 0) return a.length;
+    const matrix = [];
+    for (let i = 0; i <= b.length; i++) matrix[i] = [i];
+    for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
+    for (let i = 1; i <= b.length; i++) {
+      for (let j = 1; j <= a.length; j++) {
+        if (b.charAt(i - 1) === a.charAt(j - 1)) {
+          matrix[i][j] = matrix[i - 1][j - 1];
+        } else {
+          matrix[i][j] = Math.min(
+            matrix[i - 1][j - 1] + 1,
+            Math.min(matrix[i][j - 1] + 1, matrix[i - 1][j] + 1)
+          );
+        }
+      }
+    }
+    return matrix[b.length][a.length];
+  }
+
+  isFuzzyMatch(input, answers) {
+    // Exact match
+    if (answers.includes(input)) return { match: true, exact: true };
+    // Fuzzy match
+    for (const ans of answers) {
+      if (ans.length <= 3 && input === ans) return { match: true, exact: true }; // Short answers must be exact
+      const dist = this.levenshtein(input, ans);
+      const allowedDist = ans.length > 7 ? 2 : 1;
+      if (dist <= allowedDist) return { match: true, exact: false, matchedTo: ans };
+    }
+    return { match: false };
+  }
+
   // ──── AUDIO ────
   initAudio() {
     if (!this.audioCtx) {
@@ -177,11 +247,58 @@ class QuizApp {
         <button class="btn-primary" id="startBtn">Начать квиз →</button>
       </div>
     `;
+    const saved = localStorage.getItem('quizProgress');
+    if (saved) {
+      document.getElementById('startBtn').textContent = 'Начать заново ↻';
+      const contBtn = document.createElement('button');
+      contBtn.className = 'btn-primary';
+      contBtn.style.background = 'var(--gradient-dark)';
+      contBtn.style.marginTop = '15px';
+      contBtn.innerHTML = 'Продолжить квиз ➔';
+      contBtn.onclick = () => {
+        this.playSound('click');
+        this.loadProgress();
+      };
+      document.getElementById('startBtn').after(contBtn);
+    }
     document.getElementById('startBtn').addEventListener('click', () => {
       this.initAudio();
       this.playSound('click');
       this.startQuiz();
     });
+  }
+
+  saveProgress() {
+    if (this.retryMode) return;
+    const data = {
+      currentQuestion: this.currentQuestion,
+      score: this.score,
+      streak: this.streak,
+      maxStreak: this.maxStreak,
+      answers: this.answers,
+      quizQuestions: this.quizQuestions,
+      midwayShown: this._midwayShown
+    };
+    localStorage.setItem('quizProgress', JSON.stringify(data));
+  }
+
+  loadProgress() {
+    const saved = localStorage.getItem('quizProgress');
+    if (!saved) return;
+    const data = JSON.parse(saved);
+    this.currentQuestion = data.currentQuestion;
+    this.score = data.score;
+    this.streak = data.streak;
+    this.maxStreak = data.maxStreak;
+    this.answers = data.answers;
+    this.quizQuestions = data.quizQuestions;
+    this._midwayShown = data.midwayShown;
+    this.retryMode = false;
+    this.renderQuestion();
+  }
+
+  clearProgress() {
+    localStorage.removeItem('quizProgress');
   }
 
   startQuiz(customQuestions) {
@@ -191,6 +308,7 @@ class QuizApp {
     this.maxStreak = 0;
     this.answers = [];
     this.answered = false;
+    this.clearProgress();
     if (customQuestions) {
       this.quizQuestions = customQuestions.map(q => this.shuffleOptions(q));
       this.retryMode = true;
@@ -198,6 +316,7 @@ class QuizApp {
       this.quizQuestions = this.shuffle(questions).map(q => this.shuffleOptions(q));
       this.retryMode = false;
     }
+    this.saveProgress();
     this.renderQuestion();
   }
 
@@ -234,6 +353,8 @@ class QuizApp {
       case 'ordering': questionBody = this.renderOrdering(q); break;
     }
 
+    const bonusBadge = q.isBonus ? `<span class="bonus-badge">⭐ x3 БАЛЛЫ</span>` : '';
+
     app.innerHTML = `
       <div class="progress-container">
         <div class="progress-info">
@@ -245,9 +366,10 @@ class QuizApp {
         </div>
         <div class="progress-bar"><div class="progress-fill" style="width:${progress}%"></div></div>
       </div>
-      <div class="question-card slide-in">
+      <div class="question-card slide-in ${q.isBonus ? 'bonus-card' : ''}">
         <div class="question-header">
           <span class="question-type-badge">${q.emoji} ${typeLabels[q.type] || q.type}</span>
+          ${bonusBadge}
         </div>
         ${q.type !== 'flashcard' ? `<div class="question-text">${q.question || q.statement || ''}</div>` : ''}
         ${questionBody}
@@ -666,10 +788,14 @@ class QuizApp {
       checkBtn.classList.add('hidden');
       input.disabled = true;
       const allAnswers = [q.answer.toLowerCase(), ...(q.acceptableAnswers || []).map(a => a.toLowerCase())];
-      const isCorrect = allAnswers.includes(val);
-      input.classList.add(isCorrect ? 'correct' : 'incorrect');
-      if (!isCorrect) input.value = `${input.value} → ${q.answer}`;
-      this.handleAnswer(isCorrect, 15, q);
+
+      const checkResult = this.isFuzzyMatch(val, allAnswers);
+
+      input.classList.add(checkResult.match ? 'correct' : 'incorrect');
+      if (!checkResult.match || !checkResult.exact) {
+        input.value = `${input.value} → ${q.answer}`;
+      }
+      this.handleAnswer(checkResult.match, 15, q, checkResult.match && !checkResult.exact ? 'Засчитано с учетом опечатки!' : '');
     });
   }
 
@@ -689,16 +815,20 @@ class QuizApp {
 
       const answers1 = [q.answer1.toLowerCase(), ...(q.acceptableAnswers1 || []).map(a => a.toLowerCase())];
       const answers2 = [q.answer2.toLowerCase(), ...(q.acceptableAnswers2 || []).map(a => a.toLowerCase())];
-      const c1 = answers1.includes(val1);
-      const c2 = answers2.includes(val2);
 
-      input1.classList.add(c1 ? 'correct' : 'incorrect');
-      input2.classList.add(c2 ? 'correct' : 'incorrect');
-      if (!c1) input1.value = `${input1.value} → ${q.answer1}`;
-      if (!c2) input2.value = `${input2.value} → ${q.answer2}`;
+      const res1 = this.isFuzzyMatch(val1, answers1);
+      const res2 = this.isFuzzyMatch(val2, answers2);
 
-      if (c1 && c2) this.handleAnswer(true, 15, q);
-      else if (c1 || c2) this.handleAnswer('partial', 5, q);
+      input1.classList.add(res1.match ? 'correct' : 'incorrect');
+      input2.classList.add(res2.match ? 'correct' : 'incorrect');
+
+      if (!res1.match || !res1.exact) input1.value = `${input1.value} → ${q.answer1}`;
+      if (!res2.match || !res2.exact) input2.value = `${input2.value} → ${q.answer2}`;
+
+      const typoMsg = (res1.match && !res1.exact) || (res2.match && !res2.exact) ? 'Засчитано с учетом опечатки!' : '';
+
+      if (res1.match && res2.match) this.handleAnswer(true, 15, q, typoMsg);
+      else if (res1.match || res2.match) this.handleAnswer('partial', 5, q, typoMsg);
       else this.handleAnswer(false, 0, q);
     });
   }
@@ -912,18 +1042,24 @@ class QuizApp {
     const actionsEl = document.getElementById('actions');
     const timerBonus = result === true ? this.getTimerBonus() : 0;
 
+    // Apply bonus multiplier if it's a bonus question
+    let earnedPoints = points;
+    if (q.isBonus && result === true) earnedPoints *= 3;
+    else if (q.isBonus && result === 'partial') earnedPoints *= 2;
+
     if (result === true) {
       this.streak++;
       if (this.streak > this.maxStreak) this.maxStreak = this.streak;
-      this.addScore(points, timerBonus);
+      this.addScore(earnedPoints, timerBonus);
       this.playSound('correct');
       if (this.streak >= 3) this.spawnConfetti();
       const bonusText = timerBonus > 0 ? ` (+${timerBonus} за скорость)` : '';
-      feedbackEl.innerHTML = `<div class="feedback correct"><span class="feedback-icon">${ICONS.check}</span> Отлично! Правильный ответ!${bonusText}${extraText ? ' ' + extraText : ''}${this.streak >= 3 ? ` <strong>🔥 Серия из ${this.streak}!</strong>` : ''}</div>`;
+      const bonusMultiText = q.isBonus ? ` <strong>x3 БОНУС!</strong>` : '';
+      feedbackEl.innerHTML = `<div class="feedback correct"><span class="feedback-icon">${ICONS.check}</span> Отлично! Правильный ответ!${bonusText}${bonusMultiText}${extraText ? ' ' + extraText : ''}${this.streak >= 3 && !q.isBonus ? ` <strong>🔥 Серия из ${this.streak}!</strong>` : ''}</div>`;
       this.answers.push({ q, result: 'correct' });
     } else if (result === 'partial') {
       this.streak = 0;
-      this.addScore(points);
+      this.addScore(earnedPoints);
       this.playSound('correct');
       feedbackEl.innerHTML = `<div class="feedback partial"><span class="feedback-icon">${ICONS.partial}</span> Частично верно!${extraText}</div>`;
       this.answers.push({ q, result: 'partial' });
@@ -934,23 +1070,39 @@ class QuizApp {
       this.answers.push({ q, result: 'incorrect' });
     }
 
+    this.saveProgress();
+
     const total = this.quizQuestions.length;
     const isLast = this.currentQuestion === total - 1;
     actionsEl.innerHTML = `<button class="btn-next" id="nextBtn">${isLast ? 'Результаты →' : 'Далее →'}</button>`;
     document.getElementById('nextBtn').addEventListener('click', () => {
       // Slide-out animation
       const card = document.querySelector('.question-card');
+
+      const goNext = () => {
+        if (isLast) {
+          this.clearProgress();
+          this.showResults();
+        } else {
+          // Check for bonus insertion
+          if (!this.retryMode && this.streak === 5) {
+            const availBonus = bonusQuestions.filter(bq => !this.quizQuestions.some(qq => qq.id === bq.id));
+            if (availBonus.length > 0) {
+              const bq = availBonus[Math.floor(Math.random() * availBonus.length)];
+              this.quizQuestions.splice(this.currentQuestion + 1, 0, this.shuffleOptions(bq));
+            }
+          }
+          this.currentQuestion++;
+          this.saveProgress();
+          this.renderQuestion();
+        }
+      };
+
       if (card) {
         card.classList.remove('slide-in');
         card.classList.add('slide-out');
-        setTimeout(() => {
-          if (isLast) this.showResults();
-          else { this.currentQuestion++; this.renderQuestion(); }
-        }, 300);
-      } else {
-        if (isLast) this.showResults();
-        else { this.currentQuestion++; this.renderQuestion(); }
-      }
+        setTimeout(goNext, 300);
+      } else goNext();
     });
   }
 
