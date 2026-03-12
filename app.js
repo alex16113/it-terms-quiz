@@ -508,7 +508,7 @@ class QuizApp {
 
   renderFlashcard(q) {
     return `
-      <div class="question-text">${q.hint ? '💡 Подсказка: ' + q.hint : ''}</div>
+      ${q.hint ? `<div class="question-hint">💡 Подсказка: ${q.hint}</div>` : ''}
       <div class="flashcard-container">
         <div class="flashcard" id="flashcard">
           <div class="flashcard-face flashcard-front">

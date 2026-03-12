@@ -232,7 +232,7 @@ const questions = [
     options: [
       'Low-Level Module',
       'Lightweight Learning Method',
-      'Большая языковая модель (Large Language Model)',
+      'Large Language Model',
       'Limited Logic Machine'
     ],
     correct: 2
